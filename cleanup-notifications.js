@@ -13,7 +13,7 @@ module.exports = async ({ github, context }) => {
 
   const isWorkflowDispatch = context.eventName === "workflow_dispatch";
   const before = isWorkflowDispatch ? undefined : getDate(1);
-  const since = isWorkflowDispatch ? undefined : getDate(3);
+  const since = isWorkflowDispatch ? getDate(14) : getDate(3);
 
   console.log(`🧹 Cleaning up notifications`);
   console.log(`📡 Event name: ${context.eventName}`);
