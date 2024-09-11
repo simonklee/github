@@ -13,7 +13,7 @@ module.exports = async ({ github, context }) => {
 
   const isWorkflowDispatch = context.eventName === "workflow_dispatch";
   const before = isWorkflowDispatch ? undefined : getDate(1);
-  const since = getDate(3);
+  const since = isWorkflowDispatch ? undefined : getDate(3);
 
   console.log(`🧹 Cleaning up notifications`);
   console.log(`📡 Event name: ${context.eventName}`);
@@ -29,9 +29,9 @@ module.exports = async ({ github, context }) => {
   });
 
   // Process each notification
-  for (const notif of notifications) {
+  for (const notification of notifications) {
     let done = false;
-    const { type, unread } = notif.subject;
+    const { type, unread } = notification.subject;
 
     // Mark as done if notification is already read
     if (!unread) {
@@ -42,7 +42,7 @@ module.exports = async ({ github, context }) => {
     if (["Discussion", "CheckSuite", "Release"].includes(type)) {
       done = true;
     } else if (["Issue", "PullRequest"].includes(type)) {
-      const details = await github.request(`GET ${notif.subject.url}`);
+      const details = await github.request(`GET ${notification.subject.url}`);
 
       // Mark as done if the issue/PR is closed
       if (details.data.state === "closed") {
@@ -51,19 +51,19 @@ module.exports = async ({ github, context }) => {
     }
 
     // Remove "api." and "repos/" from the notification URL
-    const url = (notif.subject.url || notif.url)
+    const url = (notification.subject.url || notification.url)
       .replace("api.", "")
       .replace("repos/", "");
 
     // Log and delete or skip the notification
-    const action = done ? "❌" : "✅";
+    const action = done ? "DONE" : "SKIP";
     console.log(
-      `${action} [${notif.repository.full_name}] ${notif.subject.title}\n  - ${url}`,
+      `${action} [${notification.repository.full_name}] ${notification.subject.title}\n  - ${url}`,
     );
 
     // Mark as read if done
     if (done) {
-      await github.request(`PATCH /notifications/threads/${notif.id}`);
+      await github.request(`PATCH /notifications/threads/${notification.id}`);
     }
   }
 };
