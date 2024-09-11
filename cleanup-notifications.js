@@ -63,7 +63,7 @@ module.exports = async ({ github, context }) => {
 
     // Mark as read if done
     if (done) {
-      await github.request(`PATCH /notifications/threads/${notification.id}`);
+      await github.request(`DELETE /notifications/threads/${notification.id}`);
     }
   }
 };
