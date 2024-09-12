@@ -11,6 +11,13 @@ module.exports = async ({ github, context }) => {
     return new Date(now - (days || 1) * msInDay).toISOString();
   }
 
+  function isLessThan(updatedAt, hours) {
+    const now = new Date().getTime();
+    const notificationTime = new Date(updatedAt).getTime();
+    const diffInHours = (now - notificationTime) / (1000 * 60 * 60); // ms to hours
+    return diffInHours < hours;
+  }
+
   const isWorkflowDispatch = context.eventName === "workflow_dispatch";
   const before = undefined;
   const since = isWorkflowDispatch ? getDate(14) : getDate(3);
@@ -31,7 +38,7 @@ module.exports = async ({ github, context }) => {
   // Process each notification
   for (const notification of notifications) {
     let done = false;
-    const { type, unread } = notification.subject;
+    const { type, unread, updated_at } = notification.subject;
 
     // Mark as done if notification is already read
     if (!unread) {
@@ -55,15 +62,23 @@ module.exports = async ({ github, context }) => {
       .replace("api.", "")
       .replace("repos/", "");
 
-    // Log and delete or skip the notification
-    const action = done ? "DONE" : "SKIP";
-    console.log(
-      `${action} [${notification.repository.full_name}] ${notification.subject.title}\n  - ${url}`,
-    );
-
-    // Mark as read if done
+    // Log and process the notification
     if (done) {
-      await github.request(`DELETE /notifications/threads/${notification.id}`);
+      if (isLessThan(updated_at, 3)) {
+        console.log(
+          `MARK AS READ [${notification.repository.full_name}] ${notification.subject.title}\n  - ${url}`,
+        );
+        await github.request(`PATCH /notifications/threads/${notification.id}`);
+      } else {
+        console.log(
+          `DONE [${notification.repository.full_name}] ${notification.subject.title}\n  - ${url}`,
+        );
+        await github.request(`DELETE /notifications/threads/${notification.id}`);
+      }
+    } else {
+      console.log(
+        `SKIP [${notification.repository.full_name}] ${notification.subject.title}\n  - ${url}`,
+      );
     }
   }
 };
