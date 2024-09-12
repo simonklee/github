@@ -42,17 +42,17 @@ module.exports = async ({ github, context }) => {
 
     // Mark as done if notification is already read
     if (!unread) {
+      console.log(`ALREADY READ [${notification.repository.full_name}] ${notification.subject.title}`);
       done = true;
     }
 
     // Skip notifications for certain types
-    if (["Discussion", "CheckSuite", "Release"].includes(type)) {
-      done = true;
-    } else if (["Issue", "PullRequest"].includes(type)) {
+    if (["Issue", "PullRequest"].includes(type)) {
       const details = await github.request(`GET ${notification.subject.url}`);
 
       // Mark as done if the issue/PR is closed
       if (details.data.state === "closed") {
+        console.log(`CLOSED [${notification.repository.full_name}] ${notification.subject.title}`);
         done = true;
       }
     }
