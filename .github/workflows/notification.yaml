@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: cleanup-notifications
-        uses: actions/github-script@v7
+      - uses: actions/setup-go@v5
         with:
-          github-token: ${{ secrets.CLEANUP_TOKEN }}
-          script: |
-            const script = require('./cleanup-notifications.js')
-            script({github, context})
+          go-version: '1.23'
+          cache: true
+
+      - name: Run cleanup
+        env:
+          GITHUB_TOKEN: ${{ secrets.CLEANUP_TOKEN }}
+        run: go run cleanup-notifications.go --no-dry-run
