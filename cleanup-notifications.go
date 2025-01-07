@@ -30,35 +30,16 @@ type Cleaner struct {
 	config     Config
 }
 
-func getDate(days int) time.Time {
+func daysToDate(days int) time.Time {
 	return time.Now().Add(-time.Duration(days) * 24 * time.Hour)
 }
 
-func isLessThan(updatedAt time.Time, hours int) bool {
+func lessThanHours(updatedAt time.Time, hours int) bool {
 	diffHours := time.Since(updatedAt).Hours()
 	return diffHours < float64(hours)
 }
 
-func makeRequest(ctx context.Context, client *http.Client, method, url string) error {
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
-	if err != nil {
-		return fmt.Errorf("error creating request: %v", err)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error making request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return nil
-}
-
-func getGhCliToken() (string, error) {
+func githubCLIToken() (string, error) {
 	cmd := exec.Command("gh", "auth", "token")
 	output, err := cmd.Output()
 	if err != nil {
@@ -80,7 +61,7 @@ func parseFlags() (Config, error) {
 		tokenVal = os.Getenv("GITHUB_TOKEN")
 		if tokenVal == "" {
 			// Try getting token from GitHub CLI
-			if ghToken, err := getGhCliToken(); err == nil {
+			if ghToken, err := githubCLIToken(); err == nil {
 				tokenVal = ghToken
 			} else {
 				return Config{}, fmt.Errorf("GitHub token is required via -token flag, GITHUB_TOKEN environment variable, or GitHub CLI authentication")
@@ -184,7 +165,7 @@ func (c *Cleaner) processNotification(notification *github.Notification) error {
 
 	// Process the notification
 	if done {
-		if isLessThan(updatedAt.Time, 3) {
+		if lessThanHours(updatedAt.Time, 3) {
 			fmt.Printf("MARK  [%s] %s  - %s\n",
 				notification.GetRepository().GetFullName(),
 				notification.GetSubject().GetTitle(),
@@ -224,9 +205,9 @@ func (c *Cleaner) processNotification(notification *github.Notification) error {
 
 func (c *Cleaner) run() error {
 	// Calculate dates
-	since := getDate(c.config.daysToCheck)
+	since := daysToDate(c.config.daysToCheck)
 	if c.config.isManualRun {
-		since = getDate(14)
+		since = daysToDate(14)
 	}
 
 	// Log initial information
