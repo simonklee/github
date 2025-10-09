@@ -39,6 +39,11 @@ func lessThanHours(updatedAt time.Time, hours int) bool {
 	return diffHours < float64(hours)
 }
 
+func moreThanDays(updatedAt time.Time, days int) bool {
+	diffDays := time.Since(updatedAt).Hours() / 24
+	return diffDays > float64(days)
+}
+
 func githubCLIToken() (string, error) {
 	cmd := exec.Command("gh", "auth", "token")
 	output, err := cmd.Output()
@@ -154,6 +159,11 @@ func (c *Cleaner) processNotification(notification *github.Notification) error {
 			fmt.Printf("CLOSED [%s] %s\n", notification.GetRepository().GetFullName(), notification.GetSubject().GetTitle())
 			done = true
 		}
+	}
+
+	// If older than 14 days, mark as done
+	if !done && moreThanDays(updatedAt.Time, 14) {
+		done = true
 	}
 
 	// Clean up URL for display
